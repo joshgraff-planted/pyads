@@ -94,7 +94,7 @@ elif platform_is_linux():
         ctypes.POINTER(SAdsNotificationHeader),
         ctypes.c_ulong,
     )
-    
+
 elif platform_is_freebsd():
     # try to load local libTcAdsDll.so in favor to global one
     local_adslib = os.path.join(os.path.dirname(__file__), "libTcAdsDll.so")
@@ -111,7 +111,7 @@ elif platform_is_freebsd():
         ctypes.POINTER(SAdsNotificationHeader),
         ctypes.c_ulong,
     )
-    
+
 else:  # pragma: no cover, can not test unsupported platform
     raise RuntimeError("Unsupported platform {0}.".format(sys.platform))
 
@@ -121,9 +121,7 @@ callback_store: Dict[Tuple[AmsAddr, int], Callable[[SAmsAddr, SAdsNotificationHe
 class ADSError(Exception):
     """Error class for errors related to ADS communication."""
 
-    def __init__(
-        self, err_code: Optional[int] = None, text: Optional[str] = None
-    ) -> None:
+    def __init__(self, err_code: Optional[int] = None, text: Optional[str] = None) -> None:
         if err_code is not None:
             self.err_code = err_code
             try:
@@ -160,10 +158,7 @@ def router_function(fn: Callable) -> Callable:
     @wraps(fn)
     def wrapper(*args: Any, **kwargs: Any) -> Callable:
         if platform_is_windows():  # pragma: no cover, skip Windows test
-            raise RuntimeError(
-                "Router interface is not available on Win32 systems.\n"
-                "Configure AMS routes using the TwinCAT router service."
-            )
+            raise RuntimeError("Router interface is not available on Win32 systems.\n" "Configure AMS routes using the TwinCAT router service.")
         return fn(*args, **kwargs)
 
     return wrapper
@@ -189,9 +184,7 @@ def adsAddRoute(net_id: SAmsNetId, ip_address: str) -> None:
         raise ADSError(error_code)
 
 
-def send_raw_udp_message(
-    ip_address: str, message: bytes, expected_return_length: int
-) -> Tuple[bytes, Tuple[str, int]]:
+def send_raw_udp_message(ip_address: str, message: bytes, expected_return_length: int) -> Tuple[bytes, Tuple[str, int]]:
     """Send a raw UDP message to the PLC and return the response.
 
     :param str ip_address: ip address of the PLC
@@ -311,12 +304,8 @@ def adsAddRouteToPLC(
     password = password + "\0"
 
     # The head of the UDP AMS packet containing host routing information
-    data_header = struct.pack(
-        ">12s", b"\x03\x66\x14\x71\x00\x00\x00\x00\x06\x00\x00\x00"
-    )
-    data_header += struct.pack(
-        ">6B", *map(int, sending_net_id.split("."))
-    )  # Sending net ID
+    data_header = struct.pack(">12s", b"\x03\x66\x14\x71\x00\x00\x00\x00\x06\x00\x00\x00")
+    data_header += struct.pack(">6B", *map(int, sending_net_id.split(".")))  # Sending net ID
     data_header += struct.pack("<H", PORT_SYSTEMSERVICE)  # Internal communication port
     data_header += struct.pack(">2s", b"\x05\x00")  # Write command
     data_header += struct.pack(">4s", b"\x00\x00\x0c\x00")  # Block of unknown
@@ -325,12 +314,8 @@ def adsAddRouteToPLC(
     data_header += struct.pack(">2s", b"\x07\x00")  # Block of unknown
 
     actual_data = struct.pack("<H", 6)  # Byte length of AMS ID (always 6)
-    actual_data += struct.pack(
-        ">6B", *map(int, added_net_id.split("."))
-    )  # Net ID being added to the PLC
-    actual_data += struct.pack(
-        ">2s", b"\x0d\x00"
-    )  # Block of unknown (maybe encryption?)
+    actual_data += struct.pack(">6B", *map(int, added_net_id.split(".")))  # Net ID being added to the PLC
+    actual_data += struct.pack(">2s", b"\x0d\x00")  # Block of unknown (maybe encryption?)
     actual_data += struct.pack("<H", len(username))  # Length of the user name field
     actual_data += username.encode("utf-8")  # PLC Username
     actual_data += struct.pack(">2s", b"\x02\x00")  # Block of unknown
@@ -338,31 +323,19 @@ def adsAddRouteToPLC(
     actual_data += password.encode("utf-8")  # PLC Password
     actual_data += struct.pack(">2s", b"\x05\x00")  # Block of unknown
     actual_data += struct.pack("<H", len(adding_host_name))  # Length of route name
-    actual_data += adding_host_name.encode(
-        "utf-8"
-    )  # Name of route being added to the PLC
+    actual_data += adding_host_name.encode("utf-8")  # Name of route being added to the PLC
 
-    data, addr = send_raw_udp_message(
-        ip_address, data_header + actual_data, 32
-    )  # PLC response is 32 bytes long
+    data, addr = send_raw_udp_message(ip_address, data_header + actual_data, 32)  # PLC response is 32 bytes long
 
-    rcvd_packet_header = data[
-        0:12
-    ]  # AMS Packet header, seems to define communication type
+    rcvd_packet_header = data[0:12]  # AMS Packet header, seems to define communication type
     # If the last byte in the header is 0x80, then this is a response to our request
     if struct.unpack(">B", rcvd_packet_header[-1:])[0] == 0x80:
         rcvd_PLC_AMS_ID = struct.unpack(">6B", data[12:18])[0]  # AMS ID of PLC
         # Convert to a String AMS ID
-        rcvd_AMS_port = struct.unpack(
-            "<H", data[18:20]
-        )  # Some sort of AMS port? Little endian
-        rcvd_command_code = struct.unpack(
-            "<2s", data[20:22]
-        )  # Command code (should be read) Little endian
+        rcvd_AMS_port = struct.unpack("<H", data[18:20])  # Some sort of AMS port? Little endian
+        rcvd_command_code = struct.unpack("<2s", data[20:22])  # Command code (should be read) Little endian
         rcvd_protocol_block = data[22:]  # Unknown block of protocol
-        rcvd_is_password_correct = rcvd_protocol_block[
-            4:7
-        ]  # 0x040000 when password was correct, 0x000407 when it was incorrect
+        rcvd_is_password_correct = rcvd_protocol_block[4:7]  # 0x040000 when password was correct, 0x000407 when it was incorrect
 
         if rcvd_is_password_correct == b"\x04\x00\x00":
             return True
@@ -375,29 +348,21 @@ def adsAddRouteToPLC(
 
 def adsGetNetIdForPLC(ip_address: str) -> str:
     """Get AMS Net ID from IP address.
-    
+
     :param str ip_address: ip address of the PLC
     :rtype: str
     :return: net id of the device at the provided ip address
-    
+
     """
     # The head of the UDP AMS packet containing host routing information
-    data_header = struct.pack(
-        ">12s", b"\x03\x66\x14\x71\x00\x00\x00\x00\x01\x00\x00\x00"
-    )
-    data_header += struct.pack(
-        ">6B", *[1, 1, 1, 1, 1, 1]
-    )  # It doesn't matter what NetID you use here, so just send 1.1.1.1.1.1
+    data_header = struct.pack(">12s", b"\x03\x66\x14\x71\x00\x00\x00\x00\x01\x00\x00\x00")
+    data_header += struct.pack(">6B", *[1, 1, 1, 1, 1, 1])  # It doesn't matter what NetID you use here, so just send 1.1.1.1.1.1
     data_header += struct.pack("<H", PORT_SYSTEMSERVICE)  # Internal communication port
     data_header += struct.pack(">4s", b"\x00\x00\x00\x00")  # Block of unknown
 
-    data, addr = send_raw_udp_message(
-        ip_address, data_header, 395
-    )  # PLC response is 395 bytes long
+    data, addr = send_raw_udp_message(ip_address, data_header, 395)  # PLC response is 395 bytes long
 
-    rcvd_packet_header = data[
-        0:12
-    ]  # AMS Packet header, seems to define communication type
+    rcvd_packet_header = data[0:12]  # AMS Packet header, seems to define communication type
     # If the last byte in the header is 0x80, then this is a response to our request
     if struct.unpack(">B", rcvd_packet_header[-1:])[0] == 0x80:
         ams_id_tuple = struct.unpack(">6B", data[12:18])  # AMS ID of PLC
@@ -502,9 +467,7 @@ def adsSyncReadStateReqEx(port: int, address: AmsAddr) -> Tuple[int, int]:
     device_state = ctypes.c_uint16()
     device_state_pointer = ctypes.pointer(device_state)
 
-    error_code = sync_read_state_request(
-        port, ams_address_pointer, ads_state_pointer, device_state_pointer
-    )
+    error_code = sync_read_state_request(port, ams_address_pointer, ads_state_pointer, device_state_pointer)
 
     if error_code:
         raise ADSError(error_code)
@@ -534,9 +497,7 @@ def adsSyncReadDeviceInfoReqEx(port: int, address: AmsAddr) -> Tuple[str, AdsVer
     ads_version = SAdsVersion()
     ads_version_pointer = ctypes.pointer(ads_version)
 
-    error_code = sync_read_device_info_request(
-        port, ams_address_pointer, device_name_pointer, ads_version_pointer
-    )
+    error_code = sync_read_device_info_request(port, ams_address_pointer, device_name_pointer, ads_version_pointer)
 
     if error_code:
         raise ADSError(error_code)
@@ -701,9 +662,7 @@ def adsSyncReadWriteReqEx2(
         read_length = response_size
 
     elif index_group == ADSIGRP_SUMUP_WRITE:
-        response_size = (
-            index_offset * 4
-        )  # expect 4 bytes back for every value written (error data)
+        response_size = index_offset * 4  # expect 4 bytes back for every value written (error data)
         read_data_buf = bytearray(response_size)
         read_data = (ctypes.c_ubyte * len(read_data_buf)).from_buffer(read_data_buf)
         read_data_pointer = ctypes.pointer(read_data)
@@ -776,24 +735,12 @@ def adsSyncReadWriteReqEx2(
     if index_group == ADSIGRP_SUMUP_READ or index_group == ADSIGRP_SUMUP_WRITE:
         expected_length = response_size
     else:
-        expected_length = (
-            read_data.entryLength
-            if isinstance(read_data, SAdsSymbolEntry)
-            else read_length
-        )
+        expected_length = read_data.entryLength if isinstance(read_data, SAdsSymbolEntry) else read_length
 
     # If we're reading a value of predetermined size (anything but a string or wstring),
     # validate that the correct number of bytes were read
-    if (
-        check_length
-        and not (type_is_string(read_data_type) or type_is_wstring(read_data_type))
-        and bytes_read.value != expected_length
-    ):
-        raise RuntimeError(
-            "Insufficient data (expected {0} bytes, {1} were read).".format(
-                expected_length, bytes_read.value
-            )
-        )
+    if check_length and not (type_is_string(read_data_type) or type_is_wstring(read_data_type)) and bytes_read.value != expected_length:
+        raise RuntimeError("Insufficient data (expected {0} bytes, {1} were read).".format(expected_length, bytes_read.value))
 
     if return_ctypes:
         return read_data
@@ -861,16 +808,8 @@ def adsSyncReadReqEx2(
 
     # If we're reading a value of predetermined size (anything but a string or wstring),
     # validate that the correct number of bytes were read
-    if (
-        check_length
-        and not(type_is_string(data_type) or type_is_wstring(data_type))
-        and bytes_read.value != data_length.value
-    ):
-        raise RuntimeError(
-            "Insufficient data (expected {0} bytes, {1} were read).".format(
-                data_length.value, bytes_read.value
-            )
-        )
+    if check_length and not (type_is_string(data_type) or type_is_wstring(data_type)) and bytes_read.value != data_length.value:
+        raise RuntimeError("Insufficient data (expected {0} bytes, {1} were read).".format(data_length.value, bytes_read.value))
 
     if return_ctypes:
         return data
@@ -960,7 +899,10 @@ def adsSumReadBytes(
 
 
 def adsSumRead(
-    port: int, address: AmsAddr, data_names: List[str], data_symbols: Dict[str, SAdsSymbolEntry],
+    port: int,
+    address: AmsAddr,
+    data_names: List[str],
+    data_symbols: Dict[str, SAdsSymbolEntry],
     structured_data_names: List[str],
 ) -> Dict[str, Any]:
     """Perform a sum read to get the value of multiple variables
@@ -978,13 +920,9 @@ def adsSumRead(
 
     num_requests = len(data_names)
 
-    symbol_infos = [
-        (data_symbols[name].iGroup, data_symbols[name].iOffs,
-         data_symbols[name].size) for name in data_names
-    ]
+    symbol_infos = [(data_symbols[name].iGroup, data_symbols[name].iOffs, data_symbols[name].size) for name in data_names]
     # When a read is split, `data_symbols` will be bigger than `data_names`
     # Therefore we avoid looping over `data_symbols`
-
     sum_response = adsSumReadBytes(port, address, symbol_infos)
 
     data_start = 4 * num_requests
@@ -996,19 +934,25 @@ def adsSumRead(
             result[data_name] = ERROR_CODES[error]
         else:
             if data_name in structured_data_names:
-                value = sum_response[
-                    offset: offset + data_symbols[data_name].size]
+                value = sum_response[offset : offset + data_symbols[data_name].size]
             elif data_symbols[data_name].dataType == ADST_STRING:
                 # find null-terminator 1 Byte
-                null_idx = sum_response[offset: offset + data_symbols[data_name].size].index(0)
-                value = bytearray(sum_response[offset: offset + null_idx]).decode("utf-8")
+                null_idx = sum_response[offset : offset + data_symbols[data_name].size].index(0)
+                value = bytearray(sum_response[offset : offset + null_idx]).decode("utf-8")
             elif data_symbols[data_name].dataType == ADST_WSTRING:
                 # find null-terminator 2 Bytes
-                a = sum_response[offset: offset + data_symbols[data_name].size]
+                a = sum_response[offset : offset + data_symbols[data_name].size]
                 null_idx = find_wstring_null_terminator(a)
                 if null_idx is None:
                     raise ValueError("No null-terminator found in buffer")
-                value = bytearray(sum_response[offset: offset + null_idx]).decode("utf-16-le")
+                value = bytearray(sum_response[offset : offset + null_idx]).decode("utf-16-le")
+            elif data_symbols[data_name].size > ctypes.sizeof(ads_type_to_ctype[data_symbols[data_name].dataType]):
+                value = struct.unpack_from(
+                    DATATYPE_MAP[ads_type_to_ctype[data_symbols[data_name].dataType]][-1]
+                    * (data_symbols[data_name].size // ctypes.sizeof(ads_type_to_ctype[data_symbols[data_name].dataType])),
+                    sum_response,
+                    offset=offset,
+                )
             else:
                 value = struct.unpack_from(
                     DATATYPE_MAP[ads_type_to_ctype[data_symbols[data_name].dataType]],
@@ -1087,11 +1031,19 @@ def adsSumWrite(
 
     for data_name, value in data_names_and_values.items():
         if data_name in structured_data_names:
-            buf[offset: offset + data_symbols[data_name].size] = value
+            buf[offset : offset + data_symbols[data_name].size] = value
         elif data_symbols[data_name].dataType == ADST_STRING:
-            buf[offset: offset + len(value)] = value.encode("utf-8")
+            buf[offset : offset + len(value)] = value.encode("utf-8")
         elif data_symbols[data_name].dataType == ADST_WSTRING:
-            buf[offset: offset + 2 * len(value)] = value.encode("utf-16-le")
+            buf[offset : offset + 2 * len(value)] = value.encode("utf-16-le")
+        elif data_symbols[data_name].size > ctypes.sizeof(ads_type_to_ctype[data_symbols[data_name].dataType]):
+            struct.pack_into(
+                DATATYPE_MAP[ads_type_to_ctype[data_symbols[data_name].dataType]][-1]
+                * (data_symbols[data_name].size // ctypes.sizeof(ads_type_to_ctype[data_symbols[data_name].dataType])),
+                buf,
+                offset,
+                *value,
+            )
         else:
             struct.pack_into(
                 DATATYPE_MAP[ads_type_to_ctype[data_symbols[data_name].dataType]],
@@ -1229,9 +1181,7 @@ def adsSyncAddDeviceNotificationReqEx(
 
     pAmsAddr = ctypes.pointer(adr.amsAddrStruct())
     if isinstance(data, str):
-        hnl = adsSyncReadWriteReqEx2(
-            port, adr, ADSIGRP_SYM_HNDBYNAME, 0x0, PLCTYPE_UDINT, data, PLCTYPE_STRING
-        )
+        hnl = adsSyncReadWriteReqEx2(port, adr, ADSIGRP_SYM_HNDBYNAME, 0x0, PLCTYPE_UDINT, data, PLCTYPE_STRING)
 
         nIndexGroup = ctypes.c_ulong(ADSIGRP_SYM_VALBYHND)
         nIndexOffset = ctypes.c_ulong(hnl)
@@ -1240,10 +1190,7 @@ def adsSyncAddDeviceNotificationReqEx(
         nIndexOffset = ctypes.c_ulong(data[1])
         hnl = None
     else:
-        raise TypeError(
-            "Parameter data has the wrong type %s. Allowed types are: str, Tuple[int, int]."
-            % (type(data))
-        )
+        raise TypeError("Parameter data has the wrong type %s. Allowed types are: str, Tuple[int, int]." % (type(data)))
 
     attrib = pNoteAttrib.notificationAttribStruct()
     pNotification = ctypes.c_ulong()
@@ -1267,8 +1214,7 @@ def adsSyncAddDeviceNotificationReqEx(
     adsSyncAddDeviceNotificationReqFct.restype = ctypes.c_long
 
     # noinspection PyUnusedLocal
-    def wrapper(addr: SAmsAddr, notification: SAdsNotificationHeader, user: int) -> Callable[
-            [SAdsNotificationHeader, str], None]:
+    def wrapper(addr: SAmsAddr, notification: SAdsNotificationHeader, user: int) -> Callable[[SAdsNotificationHeader, str], None]:
         return callback(notification, data)
 
     # noinspection PyTypeChecker
@@ -1290,9 +1236,7 @@ def adsSyncAddDeviceNotificationReqEx(
     return pNotification.value, hnl
 
 
-def adsSyncDelDeviceNotificationReqEx(
-    port: int, adr: AmsAddr, notification_handle: int, user_handle: int
-) -> None:
+def adsSyncDelDeviceNotificationReqEx(port: int, adr: AmsAddr, notification_handle: int, user_handle: int) -> None:
     """Remove a device notification.
 
     :param int port: local AMS port as returned by adsPortOpenEx()
@@ -1311,9 +1255,7 @@ def adsSyncDelDeviceNotificationReqEx(
         raise ADSError(err_code)
 
     if user_handle is not None:
-        adsSyncWriteReqEx(
-            port, adr, ADSIGRP_SYM_RELEASEHND, 0, user_handle, PLCTYPE_UDINT
-        )
+        adsSyncWriteReqEx(port, adr, ADSIGRP_SYM_RELEASEHND, 0, user_handle, PLCTYPE_UDINT)
 
 
 def adsSyncSetTimeoutEx(port: int, n_ms: int) -> None:
