@@ -33,9 +33,18 @@ conda install pyads
 From source:
 
 ```bash
-git clone https://github.com/MrLeeh/pyads.git --recursive
+git clone https://github.com/joshgraff-planted/pyads.git --recursive
 cd pyads
 python setup.py install
+```
+
+Add to new repo:
+```bash
+git submodule add https://github.com/joshgraff-planted/pyads.git ros_ws/lib/pyads
+cd ros_ws/lib/pyads/
+git submodule update --init --recursive
+sudo python3 setup.py install
+
 ```
 
 ## Features
